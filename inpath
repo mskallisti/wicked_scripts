@@ -2,54 +2,61 @@
 # inpath--Verifies that a specified program is either valid as is or can be found in the PATH directory list
 # This is practice parsing a script aloud, so the comments are egregious.
 
-in_path()
-{
-  # Given a command and the PATH, tries to find the command. Returns zero if found and executable, 1 if not.
-  # NOTE: Temporarily modified the IFS (internal field separator) but restores on completion.
+  in_path()
+  {
+    # Given a command and the PATH, tries to find the command. Returns zero if found and executable, 1 if not.
+    # NOTE: Temporarily modified the IFS (internal field separator) but restores on completion.
 
-  cmd=$1	ourpath=$2	result=1		# set default to 1, aka "not exe", $1 is arg following inpath
-  oldIFS=$IFS	IFS=":"					# result (set default state NOPE), oldIFS save to replace
+    cmd=$1	ourpath=$2	result=1		# set default to 1, aka "not exe", $1 is arg following inpath
+    oldIFS=$IFS	IFS=":"					# result (set default state NOPE), oldIFS save to replace
 							# IFS=":" interactive mode
-  for directory in "$ourpath"				# For this directory, the one we're in. Like, now.
-  do						
-    if [ -x $directory/$cmd ] ; then			# If full path+cmd is executable, then...
-      result=0						# Update status to YUP
-    fi							# for every if, there's an = and opposite fi
-  done							# second verse, goto first, s/if/do s/fi/done
+    for directory in "$ourpath"				# For this directory, the one we're in. Like, now.
+    do						
+      if [ -x $directory/$cmd ] ; then			# If full path+cmd is executable, then...
+        result=0					# Update status to YUP
+      fi						# for every if, there's an = and opposite fi
+    done						# second verse, goto first, s/if/do s/fi/done
 
-  IFS=$oldIFS						# Save standard IFS (" ") to restore before changing
-  return $result					# 0=run it 1=keep goin
-}
+    IFS=$oldIFS						# Save standard IFS (" ") to restore before changing
+    return $result					# 0=run it 1=keep goin
+  }
 
-checkForCmdInPath()					# Are you ready to play NAME. THAT. FUNCTION??
-{
-  # This is where you check... uhhh... for whether $cmd... y'know, man. Whether it's in the path.
-  var=$1						# var = $cmd, first argument. "inpath [THISPART]"
+  checkForCmdInPath()					# Are you ready to play NAME. THAT. FUNCTION??
+  {
+    # This is where you check... uhhh... for whether $cmd... y'know, man. Whether it's in the path.
+    var=$1						# var = $cmd, first argument. "inpath [THISPART]"
 
-  if [ "$var" !="" ] ; then				# if input isn't empty
-    if [ "$var:0:1}" = "/" ] ; then			# see if first char behind $cmd is "/", then...
+    if [ "$var" !="" ] ; then				# if input isn't empty
+      if [ "$var:0:1}" = "/" ] ; then			# see if first char behind $cmd is "/", then...
+# OR     [ "${var%${var#?}}" ] ; then			# POSIX slicing method. Nested: 
+							# ${print what's left after removing${extract all but first char of $var}}
+							# # = delete, ? = regex for single char
+# OR     [ "$(echo $var | cut -c1 )" ] ; then		# System call, cut and print first char in $var 
       if [ ! -x $var ] ; then				# see if it will NOT! run if you remove path
         return 1					# set back to 1 (NOPE)
       fi
-    elif ! in_path $var "$PATH" ; then			# Otherwise, if this command exists anywhere in PATH, add it
-      return 2						# add the /path/to/ part of /path/to/cmd
+      elif ! in_path $var "$PATH" ; then		# Otherwise, if this command exists anywhere in PATH, add it
+        return 2					# add the /path/to/ part of /path/to/cmd
+      fi
     fi
-  fi
-}
+  }
 
 
 							# Comment out the below for library use, this is for testing only
 
-if [ $# -ne 1 ] ; then					# If they forget to add a command
-  echo "Usage: $0 command" >&2				# ... remind them.
-  exit 1						# Mark it NOPED
-fi
+  if [ $# -ne 1 ] ; then				# If they forget to add a command
+    echo "Usage: $0 command" >&				# ... remind them.
+    exit 1						# Mark it NOPED
+  fi
 
-checkForCmdInPath "$1"					# That thing we made? Yeah, run that thing to test it.
-case $? in						# What's your status, $?
-  0 ) echo "$1 found in PATH"			;;	# yup_cmd is in a PATH dir, no /full/path/ needed.
-  1 ) echo "$1 not found or not executable"	;;	# I can't find it, or it doesn't run. Either way, *shrug*
-  2 ) echo "$1 not found in PATH"		::	# It... runs now, but you need to include the path part
-esac							# Waitaminute, are you by any chance related to "case"?
+# if [ "$BASH_SOURCE" = "$0" ]				# Check if running directly or as part of another script
+#							[ ADD PROMPT TO ADD PATH IF USING INTERACTIVELY ]
 
-exit 0							# Phew, made it. Mark it YUPPED and call it a day.
+  checkForCmdInPath "$1"				# That thing we made? Yeah, run that thing to test it.
+  case $? in						# What's your status, $?
+    0 ) echo "$1 found in PATH"			;;	# yup_cmd is in a PATH dir, no /full/path/ needed.
+    1 ) echo "$1 not found or not executable"	;;	# I can't find it, or it doesn't run. Either way, *shrug*
+    2 ) echo "$1 not found in PATH"		::	# It... runs now, but you need to include the path part
+  esac							# Waitaminute, are you by any chance related to "case"?
+
+  exit 0						# Phew, made it. Mark it YUPPED and call it a day.
